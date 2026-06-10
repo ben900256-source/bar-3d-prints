@@ -20,11 +20,12 @@ cd bar-3d-prints
 python -m pip install .
 barprint configure --user
 barprint doctor
+barprint list-units --faction cortex
 barprint export --unit corak --pose all --debug-stages --out .\out\corak
 barprint view .\out\corak\corak_debug
 ```
 
-`configure --user` asks for the local BAR data path if it cannot discover one, finds Blender when it is installed in the standard location, and installs the S3O importer into user data. The export command writes printable STL files, a normalized GLB print source, manifests, debug-stage captures, and a browser viewer.
+`configure --user` asks for the local BAR data path if it cannot discover one, finds Blender when it is installed in the standard location, and installs the S3O importer into user data. `list-units --faction cortex` shows available Cortex unit codes such as `corak`, which can then be passed to `export`. The export command writes printable STL files, a normalized GLB print source, manifests, debug-stage captures, and a browser viewer.
 
 For a self-contained workspace that avoids user-level config, use:
 
