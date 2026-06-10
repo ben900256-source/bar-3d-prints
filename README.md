@@ -2,6 +2,14 @@
 
 `barprint` is a local command-line pipeline for converting Beyond All Reason unit S3O models into printable STL or 3MF files through headless Blender. Normal exports do not require opening Blender manually.
 
+## Why
+
+Beyond All Reason has a large set of distinctive unit models, but those models are built for a realtime game engine rather than 3D printing. A direct mesh export often needs manual importer setup, pose work, scaling, axis fixes, split-vertex cleanup, thin-feature thickening, and mesh repair before it has a reasonable chance of printing cleanly.
+
+`barprint` packages that conversion into a repeatable local workflow. It discovers BAR units, imports S3O models through Blender, applies automatic pose profiles, normalizes scale, repairs common mesh issues, and exports printable STL or 3MF files with manifests and debug views. The goal is to make personal model preparation consistent enough that users can spend their time choosing units and tuning prints instead of rebuilding the same export pipeline by hand.
+
+The tool runs locally and does not upload BAR assets or generated models. It is a conversion aid only; users are still responsible for following BAR's asset licenses and terms.
+
 ## Quickstart
 
 Requirements: Python 3.10+, Blender, and an installed Beyond All Reason data directory.
@@ -28,7 +36,7 @@ python -m barprint doctor
 
 ## Sample Captures
 
-These are generated debug-stage captures from `barprint` exports. They show source model appearance and pose selection; final STL/3MF output is exported as printable geometry.
+These are generated debug-stage captures from `barprint` exports after the final STL is reimported into Blender. They show the printable geometry without source textures.
 
 | CORAK bot | CORPYRO heavy bot | CORMSHIP naval unit |
 | --- | --- | --- |
