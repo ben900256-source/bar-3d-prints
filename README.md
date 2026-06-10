@@ -2,6 +2,38 @@
 
 `barprint` is a local command-line pipeline for converting Beyond All Reason unit S3O models into printable STL or 3MF files through headless Blender. Normal exports do not require opening Blender manually.
 
+## Quickstart
+
+Requirements: Python 3.10+, Blender, and an installed Beyond All Reason data directory.
+
+```powershell
+git clone https://github.com/ben900256-source/bar-3d-prints.git
+cd bar-3d-prints
+python -m pip install .
+barprint configure --user
+barprint doctor
+barprint export --unit corak --pose all --debug-stages --out .\out\corak
+barprint view .\out\corak\corak_debug
+```
+
+`configure --user` asks for the local BAR data path if it cannot discover one, finds Blender when it is installed in the standard location, and installs the S3O importer into user data. The export command writes printable STL files, a normalized GLB print source, manifests, debug-stage captures, and a browser viewer.
+
+For a self-contained workspace that avoids user-level config, use:
+
+```powershell
+python -m barprint configure --portable .\barprint-portable
+$env:BARPRINT_PORTABLE_HOME = ".\barprint-portable"
+python -m barprint doctor
+```
+
+## Sample Captures
+
+These are generated debug-stage captures from `barprint` exports. They show source model appearance and pose selection; final STL/3MF output is exported as printable geometry.
+
+| CORAK bot | CORPYRO heavy bot | CORMSHIP naval unit |
+| --- | --- | --- |
+| ![CORAK sample model capture](docs/images/corak-sample.png) | ![CORPYRO sample model capture](docs/images/corpyro-sample.png) | ![CORMSHIP sample model capture](docs/images/cormship-sample.png) |
+
 ## Install
 
 From a release wheel:
