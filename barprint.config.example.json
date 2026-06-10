@@ -1,0 +1,8 @@
+{
+  "bar_root": "C:/Users/<you>/AppData/Local/Programs/Beyond-All-Reason/data/games/BAR.sdd",
+  "blender": "C:/Program Files/Blender Foundation/Blender <version>/blender.exe",
+  "s3o_importer": "C:/path/to/s3o_import.py",
+  "scale_reference_unit": "armcom",
+  "scale_reference_height_mm": 45,
+  "test_s3o_path": "C:/path/to/model.s3o"
+}

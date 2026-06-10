@@ -1,0 +1,108 @@
+{
+  "name": "raptor_biped",
+  "scale_mm": 45,
+  "scale": {
+    "mode": "game-relative",
+    "reference_unit": "armcom",
+    "reference_height_mm": 45
+  },
+  "base": {
+    "enabled": false,
+    "diameter_mm": 32,
+    "height_mm": 2.4
+  },
+  "piece_aliases": {
+    "body": ["body", "base", "torso"],
+    "neck": ["neck"],
+    "head": ["head"],
+    "tail": ["tail"],
+    "lthigh": ["lthigh", "leftthigh"],
+    "rthigh": ["rthigh", "rightthigh"],
+    "lshin": ["lshin", "lknee", "lleg"],
+    "rshin": ["rshin", "rknee", "rleg"],
+    "lfoot": ["lfoot", "leftfoot"],
+    "rfoot": ["rfoot", "rightfoot"],
+    "larm": ["luhand", "llhand", "luparm", "larm"],
+    "rarm": ["ruhand", "rlhand", "ruparm", "rarm"]
+  },
+  "delete_piece_aliases": [],
+  "poses": [
+    { "name": "neutral", "pieces": {} },
+    {
+      "name": "aim_left",
+      "pieces": {
+        "body": { "rot_z_deg": 10 },
+        "head": { "rot_z_deg": 12 },
+        "tail": { "rot_z_deg": -8 }
+      }
+    },
+    {
+      "name": "aim_right",
+      "pieces": {
+        "body": { "rot_z_deg": -10 },
+        "head": { "rot_z_deg": -12 },
+        "tail": { "rot_z_deg": 8 }
+      }
+    },
+    {
+      "name": "stride_left",
+      "pieces": {
+        "body": { "rot_z_deg": -4, "rot_y_deg": -4 },
+        "head": { "rot_x_deg": 6, "rot_z_deg": 5 },
+        "tail": { "rot_x_deg": -8, "rot_z_deg": 10 },
+        "lthigh": { "rot_x_deg": 34, "rot_z_deg": -4 },
+        "lshin": { "rot_x_deg": -24 },
+        "lfoot": { "rot_x_deg": -28 },
+        "rthigh": { "rot_x_deg": -26, "rot_z_deg": 5 },
+        "rshin": { "rot_x_deg": 22 },
+        "rfoot": { "rot_x_deg": 24 }
+      }
+    },
+    {
+      "name": "stride_right",
+      "pieces": {
+        "body": { "rot_z_deg": 4, "rot_y_deg": 4 },
+        "head": { "rot_x_deg": 6, "rot_z_deg": -5 },
+        "tail": { "rot_x_deg": -8, "rot_z_deg": -10 },
+        "lthigh": { "rot_x_deg": -26, "rot_z_deg": -5 },
+        "lshin": { "rot_x_deg": 22 },
+        "lfoot": { "rot_x_deg": 24 },
+        "rthigh": { "rot_x_deg": 34, "rot_z_deg": 4 },
+        "rshin": { "rot_x_deg": -24 },
+        "rfoot": { "rot_x_deg": -28 }
+      }
+    },
+    {
+      "name": "brace",
+      "pieces": {
+        "body": { "rot_x_deg": -5 },
+        "head": { "rot_x_deg": 8 },
+        "tail": { "rot_x_deg": -12 },
+        "lthigh": { "rot_x_deg": -18, "rot_z_deg": -5 },
+        "rthigh": { "rot_x_deg": -18, "rot_z_deg": 5 },
+        "lshin": { "rot_x_deg": 24 },
+        "rshin": { "rot_x_deg": 24 },
+        "lfoot": { "rot_x_deg": -8 },
+        "rfoot": { "rot_x_deg": -8 },
+        "larm": { "rot_z_deg": 6 },
+        "rarm": { "rot_z_deg": -6 }
+      }
+    },
+    {
+      "name": "advance",
+      "pieces": {
+        "body": { "rot_x_deg": 8, "rot_z_deg": -5 },
+        "head": { "rot_x_deg": 10, "rot_z_deg": 6 },
+        "tail": { "rot_x_deg": -10, "rot_z_deg": 12 },
+        "lthigh": { "rot_x_deg": 38, "rot_z_deg": -4 },
+        "lshin": { "rot_x_deg": -28 },
+        "lfoot": { "rot_x_deg": -30 },
+        "rthigh": { "rot_x_deg": -30, "rot_z_deg": 6 },
+        "rshin": { "rot_x_deg": 26 },
+        "rfoot": { "rot_x_deg": 26 },
+        "larm": { "rot_z_deg": 8 },
+        "rarm": { "rot_z_deg": -8 }
+      }
+    }
+  ]
+}

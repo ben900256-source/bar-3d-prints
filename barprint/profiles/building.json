@@ -1,0 +1,49 @@
+{
+  "name": "building",
+  "scale_mm": 60,
+  "scale": {
+    "mode": "game-relative",
+    "reference_unit": "armcom",
+    "reference_height_mm": 45
+  },
+  "base": {
+    "enabled": false,
+    "diameter_mm": 0,
+    "height_mm": 0
+  },
+  "piece_aliases": {
+    "turret": ["turret"],
+    "sleeve": ["sleeve", "barrel"],
+    "barrel": ["barrel", "flare", "muzzle", "gun"]
+  },
+  "delete_piece_aliases": ["antenna"],
+  "poses": [
+    { "name": "neutral", "pieces": {} },
+    {
+      "name": "aim_left",
+      "pieces": {
+        "turret": { "rot_z_deg": 18 },
+        "sleeve": { "rot_x_deg": -4 }
+      }
+    },
+    {
+      "name": "aim_right",
+      "pieces": {
+        "turret": { "rot_z_deg": -18 },
+        "sleeve": { "rot_x_deg": -4 }
+      }
+    },
+    {
+      "name": "barrel_high",
+      "pieces": {
+        "sleeve": { "rot_x_deg": -10 }
+      }
+    },
+    {
+      "name": "barrel_low",
+      "pieces": {
+        "sleeve": { "rot_x_deg": 4 }
+      }
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.pytest-tmp/
+.venv/
+venv/
+
+Beyond-All-Reason/
+build/
+dist/
+out/
+tmp/
+vendor/
+barprint_inspect_pieces.json
+barprint.local.json
+.barprint-cache/

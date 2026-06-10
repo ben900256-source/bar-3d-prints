@@ -1,0 +1,86 @@
+{
+  "name": "tick",
+  "scale_mm": 45,
+  "scale": {
+    "mode": "game-relative",
+    "reference_unit": "armcom",
+    "reference_height_mm": 45
+  },
+  "base": {
+    "enabled": false,
+    "diameter_mm": 32,
+    "height_mm": 2.4
+  },
+  "piece_aliases": {
+    "body": ["base", "body"],
+    "turret": ["aimy1", "turret"],
+    "weapon": ["turret", "flare", "muzzle"],
+    "flare": ["flare"],
+    "rfleg": ["rfleg"],
+    "rrleg": ["rrleg"],
+    "lfleg": ["lfleg"],
+    "lrleg": ["lrleg"]
+  },
+  "delete_piece_aliases": [],
+  "poses": [
+    { "name": "neutral", "pieces": {} },
+    {
+      "name": "aim_left",
+      "pieces": {
+        "turret": { "rot_z_deg": 18 },
+        "weapon": { "rot_x_deg": -5 }
+      }
+    },
+    {
+      "name": "aim_right",
+      "pieces": {
+        "turret": { "rot_z_deg": -18 },
+        "weapon": { "rot_x_deg": -5 }
+      }
+    },
+    {
+      "name": "stride_left",
+      "pieces": {
+        "body": { "rot_x_deg": -8 },
+        "lfleg": { "rot_y_deg": 38 },
+        "rfleg": { "rot_y_deg": -38 },
+        "lrleg": { "rot_x_deg": 5, "rot_y_deg": 36, "rot_z_deg": 6 },
+        "rrleg": { "rot_x_deg": 5, "rot_y_deg": -36, "rot_z_deg": -6 },
+        "turret": { "rot_x_deg": 8 }
+      }
+    },
+    {
+      "name": "stride_right",
+      "pieces": {
+        "body": { "rot_x_deg": 8 },
+        "lfleg": { "rot_y_deg": -24 },
+        "rfleg": { "rot_y_deg": 24 },
+        "lrleg": { "rot_x_deg": 4, "rot_y_deg": -30, "rot_z_deg": 4 },
+        "rrleg": { "rot_x_deg": 4, "rot_y_deg": 30, "rot_z_deg": -4 },
+        "turret": { "rot_x_deg": 5 }
+      }
+    },
+    {
+      "name": "brace",
+      "pieces": {
+        "body": { "rot_x_deg": -4 },
+        "lfleg": { "rot_y_deg": 24 },
+        "rfleg": { "rot_y_deg": -24 },
+        "lrleg": { "rot_x_deg": 7, "rot_y_deg": 24, "rot_z_deg": 8 },
+        "rrleg": { "rot_x_deg": 7, "rot_y_deg": -24, "rot_z_deg": -8 },
+        "turret": { "rot_x_deg": 12 }
+      }
+    },
+    {
+      "name": "advance",
+      "pieces": {
+        "body": { "rot_x_deg": -10 },
+        "turret": { "rot_x_deg": 14, "rot_z_deg": 10 },
+        "lfleg": { "rot_y_deg": 48 },
+        "rfleg": { "rot_y_deg": -48 },
+        "lrleg": { "rot_x_deg": 6, "rot_y_deg": -34, "rot_z_deg": 5 },
+        "rrleg": { "rot_x_deg": 6, "rot_y_deg": 34, "rot_z_deg": -5 }
+      }
+    }
+  ]
+}

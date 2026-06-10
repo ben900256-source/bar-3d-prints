@@ -1,0 +1,61 @@
+{
+  "name": "vehicle_tank",
+  "scale_mm": 55,
+  "scale": {
+    "mode": "game-relative",
+    "reference_unit": "armcom",
+    "reference_height_mm": 45
+  },
+  "base": {
+    "enabled": false,
+    "diameter_mm": 42,
+    "height_mm": 2.6
+  },
+  "piece_aliases": {
+    "body": ["body", "base", "hull", "chassis"],
+    "turret": ["turret"],
+    "sleeve": ["sleeve", "barrel"],
+    "barrel": ["barrel", "flare", "muzzle", "gun"]
+  },
+  "delete_piece_aliases": ["antenna"],
+  "poses": [
+    { "name": "neutral", "pieces": {} },
+    {
+      "name": "aim_left",
+      "pieces": {
+        "turret": { "rot_z_deg": 20 },
+        "sleeve": { "rot_x_deg": -4 }
+      }
+    },
+    {
+      "name": "aim_right",
+      "pieces": {
+        "turret": { "rot_z_deg": -20 },
+        "sleeve": { "rot_x_deg": -4 }
+      }
+    },
+    {
+      "name": "barrel_high",
+      "pieces": {
+        "sleeve": { "rot_x_deg": -10 },
+        "turret": { "rot_z_deg": 6 }
+      }
+    },
+    {
+      "name": "bank_left",
+      "pieces": {
+        "body": { "rot_x_deg": 3, "rot_z_deg": 4 },
+        "turret": { "rot_z_deg": 12 },
+        "sleeve": { "rot_x_deg": -3 }
+      }
+    },
+    {
+      "name": "bank_right",
+      "pieces": {
+        "body": { "rot_x_deg": 3, "rot_z_deg": -4 },
+        "turret": { "rot_z_deg": -12 },
+        "sleeve": { "rot_x_deg": -3 }
+      }
+    }
+  ]
+}

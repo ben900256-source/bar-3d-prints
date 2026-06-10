@@ -1,0 +1,55 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "barprint"
+version = "0.1.0"
+description = "Convert Beyond All Reason S3O unit models into printable STL/3MF files through headless Blender."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "PolyForm Noncommercial License 1.0.0" }
+authors = [{ name = "BAR Print contributors" }]
+dependencies = ["rich>=13.7", "Pillow>=10.0"]
+
+[project.optional-dependencies]
+test = ["pytest>=8"]
+release = ["build>=1.2"]
+dev = ["pytest>=8", "build>=1.2"]
+
+[project.scripts]
+barprint = "barprint.cli:main"
+
+[tool.hatch.build]
+exclude = [
+  "/.barprint-cache",
+  "/.pytest_cache",
+  "/.pytest-tmp",
+  "/Beyond-All-Reason",
+  "/build",
+  "/dist",
+  "/out",
+  "/tmp",
+  "/vendor",
+  "/barprint.local.json",
+  "/barprint_inspect_pieces.json",
+]
+
+[tool.hatch.build.targets.sdist]
+include = [
+  "/barprint",
+  "/tests",
+  "/.gitignore",
+  "/LICENSE",
+  "/README.md",
+  "/barprint.config.example.json",
+  "/pyproject.toml",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["barprint"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+

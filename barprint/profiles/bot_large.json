@@ -1,0 +1,128 @@
+{
+  "name": "bot_large",
+  "scale_mm": 65,
+  "scale": {
+    "mode": "game-relative",
+    "reference_unit": "armcom",
+    "reference_height_mm": 45
+  },
+  "base": {
+    "enabled": false,
+    "diameter_mm": 45,
+    "height_mm": 3.0
+  },
+  "piece_aliases": {
+    "pelvis": ["pelvis", "base"],
+    "head": ["head"],
+    "torso": ["torso", "chest", "body"],
+    "aimyaw": ["aimy1", "turret", "torso"],
+    "aimpitch_left": ["aimx1", "aimxl", "lshoulder"],
+    "aimpitch_right": ["aimx2", "aimxr", "rshoulder"],
+    "weapon": ["biggun", "gun", "barrel", "flare", "muzzle"],
+    "barrel": ["barrel", "flare", "muzzle"],
+    "rarm": ["ruparm", "rarm", "rightarm", "right_arm", "ra"],
+    "larm": ["luparm", "larm", "leftarm", "left_arm", "la"],
+    "rforearm": ["rloarm", "rhand", "rightforearm", "right_forearm"],
+    "lforearm": ["lloarm", "lhand", "leftforearm", "left_forearm"],
+    "rthigh": ["rthigh", "rightthigh", "right_thigh"],
+    "lthigh": ["lthigh", "leftthigh", "left_thigh"],
+    "rleg": ["rleg", "rknee", "rshin", "rightleg", "right_leg"],
+    "lleg": ["lleg", "lknee", "lshin", "leftleg", "left_leg"],
+    "rfoot": ["rfoot", "r_foot", "rightfoot", "right_foot"],
+    "lfoot": ["lfoot", "l_foot", "leftfoot", "left_foot"]
+  },
+  "delete_piece_aliases": ["antenna"],
+  "poses": [
+    { "name": "neutral", "pieces": {} },
+    {
+      "name": "aim_left",
+      "pieces": {
+        "aimyaw": { "rot_z_deg": 12 },
+        "aimpitch_left": { "rot_x_deg": -5 },
+        "aimpitch_right": { "rot_x_deg": -4 },
+        "weapon": { "rot_x_deg": -7 }
+      }
+    },
+    {
+      "name": "aim_right",
+      "pieces": {
+        "aimyaw": { "rot_z_deg": -12 },
+        "aimpitch_left": { "rot_x_deg": -4 },
+        "aimpitch_right": { "rot_x_deg": -5 },
+        "weapon": { "rot_x_deg": -7 }
+      }
+    },
+    {
+      "name": "stride_left",
+      "pieces": {
+        "pelvis": { "rot_z_deg": 3 },
+        "torso": { "rot_z_deg": -5 },
+        "head": { "rot_z_deg": 3 },
+        "rarm": { "rot_x_deg": 12 },
+        "larm": { "rot_x_deg": -12 },
+        "rforearm": { "rot_x_deg": -16 },
+        "lforearm": { "rot_x_deg": -32 },
+        "rthigh": { "rot_x_deg": -28, "rot_z_deg": 7 },
+        "lthigh": { "rot_x_deg": 22, "rot_z_deg": -7 },
+        "rleg": { "rot_x_deg": 34 },
+        "lleg": { "rot_x_deg": -20 },
+        "rfoot": { "rot_x_deg": -14 },
+        "lfoot": { "rot_x_deg": 12 }
+      }
+    },
+    {
+      "name": "stride_right",
+      "pieces": {
+        "pelvis": { "rot_z_deg": -3 },
+        "torso": { "rot_z_deg": 5 },
+        "head": { "rot_z_deg": -3 },
+        "rarm": { "rot_x_deg": -12 },
+        "larm": { "rot_x_deg": 12 },
+        "rforearm": { "rot_x_deg": -32 },
+        "lforearm": { "rot_x_deg": -16 },
+        "rthigh": { "rot_x_deg": 22, "rot_z_deg": 7 },
+        "lthigh": { "rot_x_deg": -28, "rot_z_deg": -7 },
+        "rleg": { "rot_x_deg": -20 },
+        "lleg": { "rot_x_deg": 34 },
+        "rfoot": { "rot_x_deg": 12 },
+        "lfoot": { "rot_x_deg": -14 }
+      }
+    },
+    {
+      "name": "brace",
+      "pieces": {
+        "torso": { "rot_x_deg": 4 },
+        "head": { "rot_x_deg": -3 },
+        "rarm": { "rot_x_deg": 10, "rot_z_deg": -7 },
+        "larm": { "rot_x_deg": 10, "rot_z_deg": 7 },
+        "rforearm": { "rot_x_deg": -38 },
+        "lforearm": { "rot_x_deg": -38 },
+        "rthigh": { "rot_x_deg": -18, "rot_z_deg": 10 },
+        "lthigh": { "rot_x_deg": -18, "rot_z_deg": -10 },
+        "rleg": { "rot_x_deg": 30 },
+        "lleg": { "rot_x_deg": 30 },
+        "rfoot": { "rot_x_deg": -9 },
+        "lfoot": { "rot_x_deg": -9 }
+      }
+    },
+    {
+      "name": "advance",
+      "pieces": {
+        "torso": { "rot_x_deg": 6, "rot_z_deg": -6 },
+        "head": { "rot_x_deg": -7, "rot_z_deg": 4 },
+        "aimyaw": { "rot_z_deg": 7 },
+        "weapon": { "rot_x_deg": -10 },
+        "rarm": { "rot_x_deg": -16 },
+        "larm": { "rot_x_deg": 16 },
+        "rforearm": { "rot_x_deg": -42 },
+        "lforearm": { "rot_x_deg": -28 },
+        "rthigh": { "rot_x_deg": -32, "rot_z_deg": 9 },
+        "lthigh": { "rot_x_deg": 28, "rot_z_deg": -7 },
+        "rleg": { "rot_x_deg": 40 },
+        "lleg": { "rot_x_deg": -16 },
+        "rfoot": { "rot_x_deg": -14 },
+        "lfoot": { "rot_x_deg": 11 }
+      }
+    }
+  ]
+}

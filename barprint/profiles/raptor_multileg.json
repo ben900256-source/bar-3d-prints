@@ -1,0 +1,119 @@
+{
+  "name": "raptor_multileg",
+  "scale_mm": 45,
+  "scale": {
+    "mode": "game-relative",
+    "reference_unit": "armcom",
+    "reference_height_mm": 45
+  },
+  "base": {
+    "enabled": false,
+    "diameter_mm": 32,
+    "height_mm": 2.4
+  },
+  "piece_aliases": {
+    "body": ["body", "base", "torso"],
+    "head": ["head"],
+    "tail": ["tail"],
+    "lfthigh": ["lfthigh", "thigh1l"],
+    "rfthigh": ["rfthigh", "thigh1r"],
+    "lmthigh": ["lmthigh", "thigh2l"],
+    "rmthigh": ["rmthigh", "thigh2r"],
+    "lbthigh": ["lbthigh", "thigh3l"],
+    "rbthigh": ["rbthigh", "thigh3r"],
+    "lffoot": ["lffoot", "foot1l"],
+    "rffoot": ["rffoot", "foot1r"],
+    "lmfoot": ["lmfoot", "foot2l"],
+    "rmfoot": ["rmfoot", "foot2r"],
+    "lbfoot": ["lbfoot", "foot3l"],
+    "rbfoot": ["rbfoot", "foot3r"]
+  },
+  "delete_piece_aliases": [],
+  "poses": [
+    { "name": "neutral", "pieces": {} },
+    {
+      "name": "aim_left",
+      "pieces": {
+        "body": { "rot_z_deg": 8 },
+        "head": { "rot_z_deg": 12 },
+        "tail": { "rot_z_deg": -8 }
+      }
+    },
+    {
+      "name": "aim_right",
+      "pieces": {
+        "body": { "rot_z_deg": -8 },
+        "head": { "rot_z_deg": -12 },
+        "tail": { "rot_z_deg": 8 }
+      }
+    },
+    {
+      "name": "stride_left",
+      "pieces": {
+        "body": { "rot_z_deg": -4 },
+        "head": { "rot_z_deg": 5 },
+        "tail": { "rot_z_deg": 10 },
+        "lfthigh": { "rot_y_deg": -32, "rot_z_deg": -8 },
+        "rfthigh": { "rot_y_deg": 32, "rot_z_deg": 8 },
+        "lmthigh": { "rot_y_deg": 15 },
+        "rmthigh": { "rot_y_deg": -15 },
+        "lbthigh": { "rot_y_deg": 32, "rot_z_deg": -8 },
+        "rbthigh": { "rot_y_deg": -32, "rot_z_deg": 8 },
+        "lffoot": { "rot_z_deg": -26 },
+        "rffoot": { "rot_z_deg": 26 },
+        "lbfoot": { "rot_z_deg": 28 },
+        "rbfoot": { "rot_z_deg": -28 }
+      }
+    },
+    {
+      "name": "stride_right",
+      "pieces": {
+        "body": { "rot_z_deg": 4 },
+        "head": { "rot_z_deg": -5 },
+        "tail": { "rot_z_deg": -10 },
+        "lfthigh": { "rot_y_deg": 32, "rot_z_deg": -8 },
+        "rfthigh": { "rot_y_deg": -32, "rot_z_deg": 8 },
+        "lmthigh": { "rot_y_deg": -15 },
+        "rmthigh": { "rot_y_deg": 15 },
+        "lbthigh": { "rot_y_deg": -32, "rot_z_deg": -8 },
+        "rbthigh": { "rot_y_deg": 32, "rot_z_deg": 8 },
+        "lffoot": { "rot_z_deg": 26 },
+        "rffoot": { "rot_z_deg": -26 },
+        "lbfoot": { "rot_z_deg": -28 },
+        "rbfoot": { "rot_z_deg": 28 }
+      }
+    },
+    {
+      "name": "brace",
+      "pieces": {
+        "body": { "rot_x_deg": -4 },
+        "head": { "rot_x_deg": 4 },
+        "tail": { "rot_x_deg": -6 },
+        "lfthigh": { "rot_y_deg": -20, "rot_z_deg": -10 },
+        "rfthigh": { "rot_y_deg": 20, "rot_z_deg": 10 },
+        "lmthigh": { "rot_y_deg": 8 },
+        "rmthigh": { "rot_y_deg": -8 },
+        "lbthigh": { "rot_y_deg": 20, "rot_z_deg": -10 },
+        "rbthigh": { "rot_y_deg": -20, "rot_z_deg": 10 }
+      }
+    },
+    {
+      "name": "advance",
+      "pieces": {
+        "body": { "rot_x_deg": 6, "rot_z_deg": -5 },
+        "head": { "rot_x_deg": 5, "rot_z_deg": 6 },
+        "tail": { "rot_z_deg": 12 },
+        "lfthigh": { "rot_y_deg": -38, "rot_z_deg": -10 },
+        "rfthigh": { "rot_y_deg": 38, "rot_z_deg": 10 },
+        "lmthigh": { "rot_y_deg": 18 },
+        "rmthigh": { "rot_y_deg": -18 },
+        "lbthigh": { "rot_y_deg": 38, "rot_z_deg": -10 },
+        "rbthigh": { "rot_y_deg": -38, "rot_z_deg": 10 },
+        "lffoot": { "rot_z_deg": -32 },
+        "rffoot": { "rot_z_deg": 32 },
+        "lbfoot": { "rot_z_deg": 34 },
+        "rbfoot": { "rot_z_deg": -34 }
+      }
+    }
+  ]
+}

@@ -1,0 +1,49 @@
+{
+  "name": "turret",
+  "scale_mm": 45,
+  "scale": {
+    "mode": "game-relative",
+    "reference_unit": "armcom",
+    "reference_height_mm": 45
+  },
+  "base": {
+    "enabled": false,
+    "diameter_mm": 32,
+    "height_mm": 2.4
+  },
+  "piece_aliases": {
+    "turret": ["turret"],
+    "sleeve": ["sleeve", "barrel"],
+    "barrel": ["barrel", "flare", "muzzle", "gun"]
+  },
+  "delete_piece_aliases": ["antenna"],
+  "poses": [
+    { "name": "neutral", "pieces": {} },
+    {
+      "name": "aim_left",
+      "pieces": {
+        "turret": { "rot_z_deg": 24 },
+        "sleeve": { "rot_x_deg": -5 }
+      }
+    },
+    {
+      "name": "aim_right",
+      "pieces": {
+        "turret": { "rot_z_deg": -24 },
+        "sleeve": { "rot_x_deg": -5 }
+      }
+    },
+    {
+      "name": "barrel_high",
+      "pieces": {
+        "sleeve": { "rot_x_deg": -12 }
+      }
+    },
+    {
+      "name": "barrel_low",
+      "pieces": {
+        "sleeve": { "rot_x_deg": 5 }
+      }
+    }
+  ]
+}
