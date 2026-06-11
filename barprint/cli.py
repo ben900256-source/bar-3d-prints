@@ -268,6 +268,11 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Write opt-in diagnostic stage renders, snapshots, reports, and a debug viewer beside the export.",
     )
+    export_parser.add_argument(
+        "--export-support-files",
+        action="store_true",
+        help="Write sidecar manifest JSON and normalized print-source GLB files beside the export.",
+    )
     export_parser.add_argument("--verbose", action="store_true")
     export_parser.add_argument("--no-selector-icons", action="store_true", help="Disable icons in interactive unit selection.")
     export_parser.set_defaults(func=cmd_export)
@@ -449,6 +454,8 @@ def export_pose_output(
     progress_callback,
 ) -> None:
     extra_args = {"keep_raw": args.keep_raw}
+    if args.export_support_files:
+        extra_args["export_support_files"] = True
     if args.debug_stages:
         extra_args["debug_stages"] = True
     run_blender_export(

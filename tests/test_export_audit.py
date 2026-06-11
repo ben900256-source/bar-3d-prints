@@ -152,7 +152,7 @@ def test_unit_exports_cleanly(unit: UnitAsset | None, export_audit_session: Expo
             "neutral",
             paths.output,
             "stl",
-            {},
+            {"export_support_files": True},
         )
         validate_audit_output(paths, profile, result)
     except Exception as exc:
@@ -237,7 +237,7 @@ def add_debug_artifacts(
             "neutral",
             paths.debug_output,
             "stl",
-            {"debug_stages": True},
+            {"debug_stages": True, "export_support_files": True},
         )
     except Exception as exc:
         result.debug_stage_report = None

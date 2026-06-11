@@ -44,15 +44,13 @@ barprint export --unit corak --out .\out\corak
 
 Use the `Code` column with `barprint export`. In the example above, the code is `corak`.
 
-After the export, expect these files:
+After the export, expect the final STL:
 
 ```text
 out/corak/corak.stl
-out/corak/corak_manifest.json
-out/corak/corak_print_source.glb
 ```
 
-Open `corak.stl` in your slicer. The manifest records the source model, scale, pose profile, mesh repair steps, and Blender version used for the export. The GLB is the normalized print source used by the final STL step.
+Open `corak.stl` in your slicer. If you want the manifest JSON and normalized print-source GLB for debugging or audit trails, add `--export-support-files`.
 
 ## More Docs
 

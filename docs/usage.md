@@ -195,6 +195,17 @@ The output directory contains:
 
 ```text
 out/corak/corak.stl
+```
+
+By default, `barprint` leaves only the final STL or 3MF. To also keep the manifest JSON and normalized print-source GLB:
+
+```powershell
+barprint export --unit corak --out .\out\corak --export-support-files
+```
+
+That adds:
+
+```text
 out/corak/corak_manifest.json
 out/corak/corak_print_source.glb
 ```

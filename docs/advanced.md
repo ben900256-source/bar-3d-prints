@@ -165,15 +165,22 @@ barprint view .\out\corak\corak_debug\corak_debug_viewer.html
 
 If you exported multiple poses with debug stages, `barprint` also writes a multi-row viewer next to the output base.
 
-## Manifests and JSON
+## Support Files and JSON
 
-Every export writes a manifest next to the model:
+Normal exports write only the final STL or 3MF. Add `--export-support-files` when you want the manifest JSON and normalized print-source GLB:
+
+```powershell
+barprint export --unit corak --out .\out\corak --export-support-files
+```
+
+That writes these sidecar files next to the model:
 
 ```text
 out/corak/corak_manifest.json
+out/corak/corak_print_source.glb
 ```
 
-The manifest records the source S3O, pose, pose profile name, archetype, scale, mesh closure, thin feature thickening, base settings, warnings, and Blender version.
+The manifest records the source S3O, pose, pose profile name, archetype, scale, mesh closure, thin feature thickening, base settings, warnings, and Blender version. The GLB is the normalized print source used internally by the STL/3MF export path.
 
 Check setup as JSON:
 
@@ -220,7 +227,7 @@ barprint export --s3o .\model.s3o --scale-mm 45 --out .\out\model
 
 BAR models are game meshes. They may contain very thin barrels, floating pieces, holes, overlapping surfaces, or details that do not survive FDM printing.
 
-`barprint` imports and poses the S3O, forces print-source materials to opaque beige, writes a normalized `*_print_source.glb`, reloads that GLB, welds and caps mesh boundary loops, rebuilds some closed residual non-manifold pieces as convex hulls, thickens thin features, optionally adds a base, and exports the final STL or 3MF.
+`barprint` imports and poses the S3O, forces print-source materials to opaque beige, creates a normalized print-source GLB internally, reloads that GLB, welds and caps mesh boundary loops, rebuilds some closed residual non-manifold pieces as convex hulls, thickens thin features, optionally adds a base, and exports the final STL or 3MF. The internal print-source GLB is deleted unless `--export-support-files` is passed.
 
 Tune thin feature handling:
 

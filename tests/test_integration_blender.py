@@ -66,7 +66,7 @@ def test_blender_export_creates_stl(tmp_path: Path) -> None:
         "neutral",
         out_path,
         "stl",
-        {},
+        {"export_support_files": True},
     )
     assert out_path.is_file()
     assert out_path.stat().st_size > 0
@@ -124,7 +124,7 @@ def test_blender_debug_stages_create_report_and_viewer(tmp_path: Path) -> None:
         "neutral",
         out_path,
         "stl",
-        {"debug_stages": True},
+        {"debug_stages": True, "export_support_files": True},
     )
 
     paths = debug_stage_paths(out_path)

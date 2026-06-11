@@ -566,6 +566,7 @@ def test_export_uses_configured_blender_and_importer(tmp_path: Path, monkeypatch
             "pose_name": pose_name,
             "out_path": out_path,
             "export_format": export_format,
+            "extra_args": extra_args,
         }
 
     monkeypatch.setattr("barprint.cli.find_blender", fake_find_blender)
@@ -590,6 +591,51 @@ def test_export_uses_configured_blender_and_importer(tmp_path: Path, monkeypatch
     assert calls["export"]["s3o_path"] == s3o.resolve()
     assert calls["export"]["importer_path"] == importer.resolve()
     assert calls["export"]["pose_name"] == "neutral"
+    assert "export_support_files" not in calls["export"]["extra_args"]
+
+
+def test_export_support_files_passes_blender_flag(tmp_path: Path, monkeypatch) -> None:
+    s3o = tmp_path / "model.s3o"
+    importer = tmp_path / "s3o_import.py"
+    s3o.write_bytes(b"s3o")
+    importer.write_text("# importer", encoding="utf-8")
+    calls = {}
+
+    monkeypatch.setattr("barprint.cli.find_blender", lambda value: "configured-blender")
+
+    def fake_run_blender_export(
+        blender_exe,
+        script_path,
+        s3o_path,
+        importer_path,
+        pose_profile_path,
+        pose_name,
+        out_path,
+        export_format,
+        extra_args,
+        progress_callback=None,
+    ):
+        calls["extra_args"] = extra_args
+
+    monkeypatch.setattr("barprint.cli.run_blender_export", fake_run_blender_export)
+
+    code = main(
+        [
+            "export",
+            "--s3o",
+            str(s3o),
+            "--scale-mm",
+            "45",
+            "--s3o-importer",
+            str(importer),
+            "--out",
+            str(tmp_path / "out"),
+            "--export-support-files",
+        ]
+    )
+
+    assert code == 0
+    assert calls["extra_args"]["export_support_files"] is True
 
 
 def test_export_debug_stages_passes_blender_flag(tmp_path: Path, monkeypatch) -> None:

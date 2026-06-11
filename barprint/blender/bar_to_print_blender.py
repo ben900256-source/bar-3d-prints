@@ -113,23 +113,24 @@ def main() -> int:
             finally:
                 if glb_texture_dir is not None:
                     shutil.rmtree(glb_texture_dir, ignore_errors=True)
-            progress("Writing manifest")
-            write_manifest(
-                out_path,
-                {
-                    "source_s3o": str(Path(args.s3o).resolve()),
-                    "pose_name": args.pose,
-                    "pose_profile_name": profile.get("name"),
-                    "pose_archetype": profile.get("pose_archetype"),
-                    "pose_source": profile.get("pose_source"),
-                    "variant_name": profile.get("variant_name", "standard"),
-                    "scale_mm": profile.get("scale_mm"),
-                    "scale": profile.get("scale", {}),
-                    "export_mode": "textured_game_glb",
-                    "warnings": WARNINGS,
-                    "blender_version": bpy.app.version_string,
-                },
-            )
+            if args.export_support_files:
+                progress("Writing manifest")
+                write_manifest(
+                    out_path,
+                    {
+                        "source_s3o": str(Path(args.s3o).resolve()),
+                        "pose_name": args.pose,
+                        "pose_profile_name": profile.get("name"),
+                        "pose_archetype": profile.get("pose_archetype"),
+                        "pose_source": profile.get("pose_source"),
+                        "variant_name": profile.get("variant_name", "standard"),
+                        "scale_mm": profile.get("scale_mm"),
+                        "scale": profile.get("scale", {}),
+                        "export_mode": "textured_game_glb",
+                        "warnings": WARNINGS,
+                        "blender_version": bpy.app.version_string,
+                    },
+                )
             progress("Done")
             return 0
         add_printable_markers(profile)
@@ -144,8 +145,10 @@ def main() -> int:
         if debugger:
             debugger.capture("E")
             debugger.export_game_glb()
-        progress("Writing GLB print source")
+        progress("Preparing print source")
         print_source = reload_scene_from_glb_print_source(out_path, debugger=debugger)
+        if not args.export_support_files:
+            remove_file_if_exists(Path(print_source["path"]))
         progress("Closing mesh boundary loops")
         mesh_closure = apply_mesh_closure()
         if debugger:
@@ -176,27 +179,28 @@ def main() -> int:
         if debugger:
             debugger.capture_final_export(out_path, args.format)
             debug_manifest = debugger.finalize()
-        progress("Writing manifest")
-        manifest = {
-            "source_s3o": str(Path(args.s3o).resolve()),
-            "pose_name": args.pose,
-            "pose_profile_name": profile.get("name"),
-            "pose_archetype": profile.get("pose_archetype"),
-            "pose_source": profile.get("pose_source"),
-            "variant_name": profile.get("variant_name", "standard"),
-            "scale_mm": profile.get("scale_mm"),
-            "scale": profile.get("scale", {}),
-            "thin_features": thin_features,
-            "print_source": print_source,
-            "mesh_closure": mesh_closure,
-            "post_join_cleanup": post_join_cleanup,
-            "base": profile.get("base", {}),
-            "warnings": WARNINGS,
-            "blender_version": bpy.app.version_string,
-        }
-        if debug_manifest is not None:
-            manifest["debug_stages"] = debug_manifest
-        write_manifest(out_path, manifest)
+        if args.export_support_files:
+            progress("Writing manifest")
+            manifest = {
+                "source_s3o": str(Path(args.s3o).resolve()),
+                "pose_name": args.pose,
+                "pose_profile_name": profile.get("name"),
+                "pose_archetype": profile.get("pose_archetype"),
+                "pose_source": profile.get("pose_source"),
+                "variant_name": profile.get("variant_name", "standard"),
+                "scale_mm": profile.get("scale_mm"),
+                "scale": profile.get("scale", {}),
+                "thin_features": thin_features,
+                "print_source": print_source,
+                "mesh_closure": mesh_closure,
+                "post_join_cleanup": post_join_cleanup,
+                "base": profile.get("base", {}),
+                "warnings": WARNINGS,
+                "blender_version": bpy.app.version_string,
+            }
+            if debug_manifest is not None:
+                manifest["debug_stages"] = debug_manifest
+            write_manifest(out_path, manifest)
         progress("Done")
         return 0
     except Exception as exc:
@@ -225,6 +229,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--keep-raw", action="store_true")
     parser.add_argument("--inspect-pieces", action="store_true")
     parser.add_argument("--debug-stages", action="store_true")
+    parser.add_argument("--export-support-files", action="store_true")
     parser.add_argument("--debug-output")
     parser.add_argument("--debug-default-stl")
     return parser.parse_args(argv)
@@ -4457,6 +4462,13 @@ def export_model(out_path: Path, format_name: str) -> None:
 def write_manifest(out_path: Path, metadata: dict) -> None:
     manifest_path = out_path.with_name(out_path.stem + "_manifest.json")
     manifest_path.write_text(json.dumps(metadata, indent=2), encoding="utf-8")
+
+
+def remove_file_if_exists(path: Path) -> None:
+    try:
+        path.unlink()
+    except FileNotFoundError:
+        return
 
 
 def write_piece_inspection(out_path: Path, s3o_path: Path) -> None:
