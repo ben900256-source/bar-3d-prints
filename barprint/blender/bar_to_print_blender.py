@@ -26,7 +26,7 @@ from mathutils.bvhtree import BVHTree
 WARNINGS: list[str] = []
 DEBUG_OBJECT_PREFIX = "barprint_debug_"
 OPAQUE_BEIGE_RGBA = (0.84, 0.815, 0.745, 1.0)
-DEBUG_VIEW_DIRECTION = Vector((1.1, -1.45, 0.82)).normalized()
+DEBUG_VIEW_DIRECTION = Vector((-1.1, 1.45, 0.82)).normalized()
 MESH_CLOSURE_WELD_EPSILON_MM = 0.001
 MESH_CLOSURE_SHORT_NON_MANIFOLD_EDGE_MM = 0.02
 MESH_CLOSURE_PLANAR_CAP_MAX_DEVIATION_MM = 0.05
@@ -35,10 +35,15 @@ MESH_CLOSURE_SMALL_OPEN_BOUNDARY_REPAIR_MAX_SPAN_MM = 0.25
 MESH_CLOSURE_BOUNDARY_FILL_PASSES = 3
 MESH_CLOSURE_OVERUSED_FACE_REMOVAL_LIMIT = 128
 MESH_CLOSURE_CONVEX_HULL_MAX_BOUNDS_DRIFT_MM = 0.01
+MESH_CLOSURE_CONVEX_HULL_MAX_INPUT_FACES = 320
 MESH_CLOSURE_GEOMETRIC_CONVEX_HULL_MAX_FACES = 96
 MESH_CLOSURE_PLANAR_SHEET_SOLIDIFY_THICKNESS_MM = 0.8
 MESH_CLOSURE_PLANAR_SHEET_MAX_DEVIATION_MM = 0.01
 MESH_CLOSURE_PLANAR_SHEET_MAX_FACES = 128
+LOCAL_FACE_REPAIR_MAX_CANDIDATE_FACES = 24
+LOCAL_FACE_REPAIR_MAX_REMOVE_FACES = 10
+LOCAL_FACE_REPAIR_MAX_PASSES = 64
+LOCAL_FACE_REPAIR_MAX_COMBINATIONS_PER_CLUSTER = 50000
 GEOMETRIC_CLEANUP_QUANTIZATION_MM = 1e-5
 GEOMETRIC_CLEANUP_MAX_CANDIDATE_FACES = 24
 GEOMETRIC_CLEANUP_MAX_REMOVE_FACES = 10
@@ -985,6 +990,50 @@ def make_marker_for_empty(
     return bpy.context.view_layer.objects.active
 
 
+LOCAL_FACE_REPAIR_COUNT_KEYS = (
+    "clusters_considered",
+    "clusters_repaired",
+    "clusters_skipped_large",
+    "candidate_faces",
+    "edges_split",
+    "vertices_nudged",
+    "faces_removed",
+    "boundary_edge_count_before",
+    "non_manifold_edge_count_before",
+    "boundary_edge_count_after",
+    "non_manifold_edge_count_after",
+)
+
+
+def local_face_repair_manifest_fields(prefix: str) -> dict:
+    fields = {f"{prefix}_{key}": value for key, value in local_face_repair_fields().items()}
+    return fields
+
+
+def local_face_repair_fields() -> dict:
+    fields = {key: 0 for key in LOCAL_FACE_REPAIR_COUNT_KEYS}
+    fields["area_removed_mm2"] = 0.0
+    return fields
+
+
+def merge_local_face_repair_manifest_fields(target: dict, prefix: str, repair: dict) -> None:
+    for key in LOCAL_FACE_REPAIR_COUNT_KEYS:
+        target[f"{prefix}_{key}"] += repair[key]
+    target[f"{prefix}_area_removed_mm2"] = round(
+        target[f"{prefix}_area_removed_mm2"] + repair["area_removed_mm2"],
+        6,
+    )
+
+
+def local_face_repair_changed(repair: dict) -> bool:
+    return bool(
+        repair["faces_removed"]
+        or repair["edges_split"]
+        or repair["vertices_nudged"]
+        or repair["clusters_repaired"]
+    )
+
+
 def apply_mesh_closure(weld_epsilon_mm: float = MESH_CLOSURE_WELD_EPSILON_MM) -> dict:
     if weld_epsilon_mm <= 0:
         raise RuntimeError("mesh_closure weld epsilon must be greater than zero")
@@ -1019,6 +1068,7 @@ def apply_mesh_closure(weld_epsilon_mm: float = MESH_CLOSURE_WELD_EPSILON_MM) ->
         "overused_faces_removed": 0,
         "convex_hull_fallback": "residual_boundary_or_non_manifold_objects",
         "convex_hull_max_bounds_drift_mm": MESH_CLOSURE_CONVEX_HULL_MAX_BOUNDS_DRIFT_MM,
+        "convex_hull_max_input_faces": MESH_CLOSURE_CONVEX_HULL_MAX_INPUT_FACES,
         "convex_hull_rebuilt_objects": 0,
         "convex_hull_vertices_removed": 0,
         "convex_hull_faces_removed": 0,
@@ -1026,6 +1076,8 @@ def apply_mesh_closure(weld_epsilon_mm: float = MESH_CLOSURE_WELD_EPSILON_MM) ->
         "planar_sheet_solidified_objects": 0,
         "planar_sheet_vertices_added": 0,
         "planar_sheet_faces_added": 0,
+        **local_face_repair_manifest_fields("local_mesh_repair"),
+        **local_face_repair_manifest_fields("local_geometric_repair"),
         "bounds_before": scene_bounds() if objects else None,
         "bounds_after": None,
         "objects": [],
@@ -1049,6 +1101,12 @@ def apply_mesh_closure(weld_epsilon_mm: float = MESH_CLOSURE_WELD_EPSILON_MM) ->
         result["planar_caps_filled"] += object_result["planar_caps_filled"]
         result["loose_edges_removed"] += object_result["loose_edges_removed"]
         result["overused_faces_removed"] += object_result["overused_faces_removed"]
+        merge_local_face_repair_manifest_fields(result, "local_mesh_repair", object_result["local_mesh_repair"])
+        merge_local_face_repair_manifest_fields(
+            result,
+            "local_geometric_repair",
+            object_result["local_geometric_repair"],
+        )
         if object_result["convex_hull_rebuilt"]:
             result["convex_hull_rebuilt_objects"] += 1
             result["convex_hull_vertices_removed"] += max(
@@ -1105,6 +1163,8 @@ def closure_object_result_is_reportable(result: dict) -> bool:
         or result["planar_caps_filled"]
         or result["loose_edges_removed"]
         or result["overused_faces_removed"]
+        or local_face_repair_changed(result["local_mesh_repair"])
+        or local_face_repair_changed(result["local_geometric_repair"])
         or result["convex_hull_rebuilt"]
         or result["planar_sheet_solidified"]
         or result["warnings"]
@@ -1146,6 +1206,7 @@ def close_mesh_object_boundary_loops(obj: bpy.types.Object, *, weld_epsilon_mm: 
         "loose_edges_removed": 0,
         "overused_faces_removed": 0,
         "convex_hull_rebuilt": False,
+        "convex_hull_max_input_faces": MESH_CLOSURE_CONVEX_HULL_MAX_INPUT_FACES,
         "convex_hull_vertex_count_before": 0,
         "convex_hull_vertex_count_after": 0,
         "convex_hull_face_count_before": 0,
@@ -1160,6 +1221,8 @@ def close_mesh_object_boundary_loops(obj: bpy.types.Object, *, weld_epsilon_mm: 
         "planar_sheet_face_count_after": 0,
         "planar_sheet_bounds_before": None,
         "planar_sheet_bounds_after": None,
+        "local_mesh_repair": local_face_repair_fields(),
+        "local_geometric_repair": local_face_repair_fields(),
         "warnings": [],
     }
     if not mesh.vertices or not mesh.polygons:
@@ -1270,6 +1333,15 @@ def close_mesh_object_boundary_loops(obj: bpy.types.Object, *, weld_epsilon_mm: 
     )
     result.update({key: value for key, value in sheet_result.items() if key != "warnings"})
     result["warnings"].extend(sheet_result["warnings"])
+
+    mesh_repair = repair_mesh_object_residual_bad_edge_clusters(obj, target="mesh")
+    result["local_mesh_repair"] = mesh_repair
+    result["faces_removed"] += mesh_repair["faces_removed"]
+
+    geometric_repair = repair_mesh_object_residual_bad_edge_clusters(obj, target="geometric")
+    result["local_geometric_repair"] = geometric_repair
+    result["faces_removed"] += geometric_repair["faces_removed"]
+
     topology_after = mesh_topology_counts(obj.data)
     geometric_topology_after = mesh_geometric_topology_counts(obj.data)
     result["geometric_boundary_edge_count_before_hull"] = geometric_topology_after["boundary_edge_count"]
@@ -1284,7 +1356,7 @@ def close_mesh_object_boundary_loops(obj: bpy.types.Object, *, weld_epsilon_mm: 
             geometric_topology_after["boundary_edge_count"] != 0
             or geometric_topology_after["non_manifold_edge_count"] != 0
         )
-        and len(mesh.polygons) <= MESH_CLOSURE_GEOMETRIC_CONVEX_HULL_MAX_FACES
+        and len(obj.data.polygons) <= MESH_CLOSURE_GEOMETRIC_CONVEX_HULL_MAX_FACES
     ):
         topology_for_hull = geometric_topology_after
     hull_result = rebuild_closed_residual_non_manifold_as_convex_hull(
@@ -1530,6 +1602,12 @@ def rebuild_closed_residual_non_manifold_as_convex_hull(
     result["convex_hull_vertex_count_before"] = len(mesh.vertices)
     result["convex_hull_face_count_before"] = len(mesh.polygons)
     result["convex_hull_bounds_before"] = object_bounds(obj)
+    if len(mesh.polygons) > MESH_CLOSURE_CONVEX_HULL_MAX_INPUT_FACES:
+        result["warnings"].append(
+            f"{obj.name}: convex hull fallback skipped because the mesh has {len(mesh.polygons)} faces; "
+            f"max is {MESH_CLOSURE_CONVEX_HULL_MAX_INPUT_FACES}"
+        )
+        return result
     materials = list(mesh.materials)
     coordinates = [vertex.co.copy() for vertex in mesh.vertices]
 
@@ -1658,6 +1736,615 @@ def clean_non_manifold_artifacts_after_closure(bm: bmesh.types.BMesh) -> dict:
     result["overused_faces_removed"] += overused_faces_removed
     result["faces_removed"] += overused_faces_removed
     return result
+
+
+def repair_mesh_object_residual_bad_edge_clusters(obj: bpy.types.Object, *, target: str) -> dict:
+    mesh = obj.data
+    result = local_face_repair_fields()
+    if not mesh.vertices or not mesh.polygons:
+        return result
+
+    bm = bmesh.new()
+    try:
+        bm.from_mesh(mesh)
+        bm.verts.ensure_lookup_table()
+        bm.edges.ensure_lookup_table()
+        bm.faces.ensure_lookup_table()
+        if target == "mesh":
+            result = repair_mesh_bad_edge_clusters_with_face_removal(bm)
+        elif target == "geometric":
+            result = repair_geometric_bad_edge_clusters_with_face_removal(bm)
+        else:
+            raise ValueError(f"unknown local residual repair target: {target}")
+        if local_face_repair_changed(result):
+            bmesh.ops.recalc_face_normals(bm, faces=list(bm.faces))
+            bm.to_mesh(mesh)
+    finally:
+        bm.free()
+
+    if local_face_repair_changed(result):
+        mesh.update()
+        recalculate_mesh_normals(mesh)
+    return result
+
+
+def repair_mesh_bad_edge_clusters_with_face_removal(bm: bmesh.types.BMesh) -> dict:
+    result = local_face_repair_fields()
+    before_counts = bmesh_topology_counts(bm)
+    result["boundary_edge_count_before"] = before_counts["boundary_edge_count"]
+    result["non_manifold_edge_count_before"] = before_counts["non_manifold_edge_count"]
+    result["boundary_edge_count_after"] = before_counts["boundary_edge_count"]
+    result["non_manifold_edge_count_after"] = before_counts["non_manifold_edge_count"]
+    if before_counts["boundary_edge_count"] == 0 and before_counts["non_manifold_edge_count"] == 0:
+        return result
+
+    for _repair_pass in range(LOCAL_FACE_REPAIR_MAX_PASSES):
+        current_counts = bmesh_topology_counts(bm)
+        if current_counts["boundary_edge_count"] == 0 and current_counts["non_manifold_edge_count"] == 0:
+            break
+        edge_faces = bmesh_edge_faces_by_index(bm)
+        clusters = bad_edge_face_clusters(edge_faces)
+        if not clusters:
+            break
+        result["clusters_considered"] += len(clusters)
+        result["candidate_faces"] += sum(len(cluster) for cluster in clusters)
+        before_geometric_counts = bmesh_geometric_topology_counts(bm)
+
+        best: tuple[tuple, tuple[int, ...], float] | None = None
+        for cluster in clusters:
+            if len(cluster) > LOCAL_FACE_REPAIR_MAX_CANDIDATE_FACES:
+                result["clusters_skipped_large"] += 1
+                continue
+            candidate = best_mesh_cluster_face_removal(
+                bm,
+                cluster,
+                before_mesh_counts=current_counts,
+                before_geometric_counts=before_geometric_counts,
+            )
+            if candidate is None:
+                continue
+            score, removal, area_removed = candidate
+            if best is None or score < best[0]:
+                best = (score, removal, area_removed)
+
+        if best is None:
+            split_nudge = best_mesh_bad_edge_split_nudge(
+                bm,
+                before_mesh_counts=current_counts,
+                before_geometric_counts=before_geometric_counts,
+            )
+            if split_nudge is None:
+                break
+            _score, bad_edge_indices, face_indices, direction, vertices_nudged = split_nudge
+            if not split_nudge_bad_edge_component(bm, bad_edge_indices, face_indices, direction):
+                break
+            result["clusters_repaired"] += 1
+            result["edges_split"] += len(bad_edge_indices)
+            result["vertices_nudged"] += vertices_nudged
+            continue
+
+        _score, removal, area_removed = best
+        if not delete_bmesh_faces_by_index(bm, removal):
+            break
+        result["clusters_repaired"] += 1
+        result["faces_removed"] += len(removal)
+        result["area_removed_mm2"] = round(result["area_removed_mm2"] + area_removed, 6)
+
+    after_counts = bmesh_topology_counts(bm)
+    result["boundary_edge_count_after"] = after_counts["boundary_edge_count"]
+    result["non_manifold_edge_count_after"] = after_counts["non_manifold_edge_count"]
+    return result
+
+
+def repair_geometric_bad_edge_clusters_with_face_removal(bm: bmesh.types.BMesh) -> dict:
+    result = local_face_repair_fields()
+    before_counts = bmesh_geometric_topology_counts(bm)
+    result["boundary_edge_count_before"] = before_counts["boundary_edge_count"]
+    result["non_manifold_edge_count_before"] = before_counts["non_manifold_edge_count"]
+    result["boundary_edge_count_after"] = before_counts["boundary_edge_count"]
+    result["non_manifold_edge_count_after"] = before_counts["non_manifold_edge_count"]
+    if before_counts["boundary_edge_count"] == 0 and before_counts["non_manifold_edge_count"] == 0:
+        return result
+
+    for _repair_pass in range(LOCAL_FACE_REPAIR_MAX_PASSES):
+        face_edges = bmesh_geometric_face_edges(bm)
+        current_counts, edge_faces = geometric_topology_counts_from_face_edges(face_edges)
+        if current_counts["boundary_edge_count"] == 0 and current_counts["non_manifold_edge_count"] == 0:
+            break
+        clusters = bad_edge_face_clusters(edge_faces)
+        if not clusters:
+            break
+        result["clusters_considered"] += len(clusters)
+        result["candidate_faces"] += sum(len(cluster) for cluster in clusters)
+        before_mesh_counts = bmesh_topology_counts(bm)
+
+        best: tuple[tuple, tuple[int, ...], float] | None = None
+        for cluster in clusters:
+            if len(cluster) > LOCAL_FACE_REPAIR_MAX_CANDIDATE_FACES:
+                result["clusters_skipped_large"] += 1
+                continue
+            candidate = best_geometric_cluster_face_removal(
+                bm,
+                cluster,
+                face_edges=face_edges,
+                before_geometric_counts=current_counts,
+                before_mesh_counts=before_mesh_counts,
+            )
+            if candidate is None:
+                continue
+            score, removal, area_removed = candidate
+            if best is None or score < best[0]:
+                best = (score, removal, area_removed)
+
+        if best is None:
+            break
+
+        _score, removal, area_removed = best
+        if not delete_bmesh_faces_by_index(bm, removal):
+            break
+        result["clusters_repaired"] += 1
+        result["faces_removed"] += len(removal)
+        result["area_removed_mm2"] = round(result["area_removed_mm2"] + area_removed, 6)
+
+    after_counts = bmesh_geometric_topology_counts(bm)
+    result["boundary_edge_count_after"] = after_counts["boundary_edge_count"]
+    result["non_manifold_edge_count_after"] = after_counts["non_manifold_edge_count"]
+    return result
+
+
+def best_mesh_cluster_face_removal(
+    bm: bmesh.types.BMesh,
+    candidate_faces: list[int],
+    *,
+    before_mesh_counts: dict[str, int],
+    before_geometric_counts: dict[str, int],
+) -> tuple[tuple, tuple[int, ...], float] | None:
+    candidate_faces = valid_bmesh_face_indices(bm, candidate_faces)
+    if not candidate_faces:
+        return None
+    face_edges = bmesh_geometric_face_edges(bm)
+    bad_edge_faces = bad_edge_faces_for_candidate_faces(
+        bmesh_edge_faces_by_index(bm),
+        candidate_faces,
+    )
+    candidate_areas = bmesh_face_areas_by_index(bm, candidate_faces)
+    max_remove = min(LOCAL_FACE_REPAIR_MAX_REMOVE_FACES, len(candidate_faces))
+    best: tuple[tuple, tuple[int, ...], float] | None = None
+    combinations_checked = 0
+    for remove_count in range(1, max_remove + 1):
+        for removal in combinations(candidate_faces, remove_count):
+            combinations_checked += 1
+            if combinations_checked > LOCAL_FACE_REPAIR_MAX_COMBINATIONS_PER_CLUSTER:
+                return best
+            if not removal_can_improve_bad_edges(removal, bad_edge_faces):
+                continue
+            mesh_counts = bmesh_topology_counts_after_face_delete_and_cleanup(bm, removal)
+            if mesh_counts is None:
+                continue
+            if not topology_counts_are_acceptable(
+                mesh_counts,
+                before_mesh_counts,
+                require_improvement=True,
+            ):
+                continue
+            geometric_counts, _edge_faces = geometric_topology_counts_from_face_edges(
+                face_edges,
+                removed_faces=frozenset(removal),
+            )
+            if not topology_counts_are_acceptable(
+                geometric_counts,
+                before_geometric_counts,
+                require_improvement=False,
+            ):
+                continue
+            area_removed = sum(candidate_areas[face_index] for face_index in removal)
+            score = (
+                mesh_counts["boundary_edge_count"],
+                mesh_counts["non_manifold_edge_count"],
+                geometric_counts["boundary_edge_count"],
+                geometric_counts["non_manifold_edge_count"],
+                area_removed,
+                len(removal),
+                removal,
+            )
+            if best is None or score < best[0]:
+                best = (score, removal, area_removed)
+        if best is not None:
+            return best
+    return None
+
+
+def best_geometric_cluster_face_removal(
+    bm: bmesh.types.BMesh,
+    candidate_faces: list[int],
+    *,
+    face_edges: dict[int, tuple[tuple[tuple[int, int, int], tuple[int, int, int]], ...]],
+    before_geometric_counts: dict[str, int],
+    before_mesh_counts: dict[str, int],
+) -> tuple[tuple, tuple[int, ...], float] | None:
+    candidate_faces = valid_bmesh_face_indices(bm, candidate_faces)
+    if not candidate_faces:
+        return None
+    _current_counts, edge_faces = geometric_topology_counts_from_face_edges(face_edges)
+    bad_edge_faces = bad_edge_faces_for_candidate_faces(edge_faces, candidate_faces)
+    candidate_areas = bmesh_face_areas_by_index(bm, candidate_faces)
+    max_remove = min(LOCAL_FACE_REPAIR_MAX_REMOVE_FACES, len(candidate_faces))
+    best: tuple[tuple, tuple[int, ...], float] | None = None
+    combinations_checked = 0
+    for remove_count in range(1, max_remove + 1):
+        for removal in combinations(candidate_faces, remove_count):
+            combinations_checked += 1
+            if combinations_checked > LOCAL_FACE_REPAIR_MAX_COMBINATIONS_PER_CLUSTER:
+                return best
+            if not removal_can_improve_bad_edges(removal, bad_edge_faces):
+                continue
+            geometric_counts, _edge_faces = geometric_topology_counts_from_face_edges(
+                face_edges,
+                removed_faces=frozenset(removal),
+            )
+            if not topology_counts_are_acceptable(
+                geometric_counts,
+                before_geometric_counts,
+                require_improvement=True,
+            ):
+                continue
+            mesh_counts = bmesh_topology_counts_after_face_delete_and_cleanup(bm, removal)
+            if mesh_counts is None:
+                continue
+            if not topology_counts_are_acceptable(
+                mesh_counts,
+                before_mesh_counts,
+                require_improvement=False,
+            ):
+                continue
+            area_removed = sum(candidate_areas[face_index] for face_index in removal)
+            score = (
+                geometric_counts["boundary_edge_count"],
+                geometric_counts["non_manifold_edge_count"],
+                mesh_counts["boundary_edge_count"],
+                mesh_counts["non_manifold_edge_count"],
+                area_removed,
+                len(removal),
+                removal,
+            )
+            if best is None or score < best[0]:
+                best = (score, removal, area_removed)
+        if best is not None:
+            return best
+    return None
+
+
+def bad_edge_faces_for_candidate_faces(edge_faces: dict, candidate_faces: list[int]) -> list[set[int]]:
+    candidate_face_set = set(candidate_faces)
+    return [
+        set(faces)
+        for faces in edge_faces.values()
+        if len(faces) > 2 and faces.intersection(candidate_face_set)
+    ]
+
+
+def removal_can_improve_bad_edges(removal: tuple[int, ...], bad_edge_faces: list[set[int]]) -> bool:
+    removal_set = set(removal)
+    improved = False
+    for faces in bad_edge_faces:
+        removed_count = len(faces.intersection(removal_set))
+        if removed_count == 0:
+            continue
+        remaining_count = len(faces) - removed_count
+        if remaining_count < 2:
+            return False
+        if remaining_count == 2:
+            improved = True
+    return improved
+
+
+def best_mesh_bad_edge_split_nudge(
+    bm: bmesh.types.BMesh,
+    *,
+    before_mesh_counts: dict[str, int],
+    before_geometric_counts: dict[str, int],
+) -> tuple[tuple, tuple[int, ...], tuple[int, ...], Vector, int] | None:
+    bm.verts.ensure_lookup_table()
+    bm.edges.ensure_lookup_table()
+    bm.faces.ensure_lookup_table()
+    bm.edges.index_update()
+    bm.faces.index_update()
+    bad_edge_indices = tuple(sorted(edge.index for edge in bm.edges if edge.is_valid and len(edge.link_faces) > 2))
+    if not bad_edge_indices:
+        return None
+
+    components = mesh_face_components_excluding_edges(bm, set(bad_edge_indices))
+    if not components:
+        return None
+    mesh_center = bmesh_vertices_center(list(bm.verts))
+    faces_by_index = {face.index: face for face in bm.faces if face.is_valid}
+
+    best: tuple[tuple, tuple[int, ...], tuple[int, ...], Vector, int] | None = None
+    for face_indices in components:
+        if len(face_indices) == len(faces_by_index):
+            continue
+        component_faces = [faces_by_index[index] for index in face_indices if index in faces_by_index]
+        if not component_faces:
+            continue
+        component_verts = unique_faces_vertices(component_faces)
+        if not component_verts or len(component_verts) == len(bm.verts):
+            continue
+        directions = component_nudge_directions(component_faces, component_verts, mesh_center)
+        for direction_index, direction in enumerate(directions):
+            trial_counts = topology_counts_after_split_nudge(
+                bm,
+                bad_edge_indices,
+                face_indices,
+                direction,
+            )
+            if trial_counts is None:
+                continue
+            mesh_counts = trial_counts["mesh"]
+            geometric_counts = trial_counts["geometric"]
+            if not topology_counts_are_acceptable(
+                mesh_counts,
+                before_mesh_counts,
+                require_improvement=True,
+            ):
+                continue
+            if not topology_counts_are_acceptable(
+                geometric_counts,
+                before_geometric_counts,
+                require_improvement=False,
+            ):
+                continue
+            score = (
+                mesh_counts["boundary_edge_count"],
+                mesh_counts["non_manifold_edge_count"],
+                geometric_counts["boundary_edge_count"],
+                geometric_counts["non_manifold_edge_count"],
+                len(component_verts),
+                len(face_indices),
+                direction_index,
+                face_indices,
+            )
+            if best is None or score < best[0]:
+                best = (score, bad_edge_indices, face_indices, direction, len(component_verts))
+    return best
+
+
+def mesh_face_components_excluding_edges(
+    bm: bmesh.types.BMesh,
+    blocked_edge_indices: set[int],
+) -> list[tuple[int, ...]]:
+    bm.edges.ensure_lookup_table()
+    bm.faces.ensure_lookup_table()
+    bm.edges.index_update()
+    bm.faces.index_update()
+
+    seed_face_indices = {
+        face.index
+        for edge in bm.edges
+        if edge.is_valid and edge.index in blocked_edge_indices
+        for face in edge.link_faces
+        if face.is_valid
+    }
+    components: list[tuple[int, ...]] = []
+    seen_components: set[tuple[int, ...]] = set()
+    for seed_index in sorted(seed_face_indices):
+        if seed_index >= len(bm.faces) or not bm.faces[seed_index].is_valid:
+            continue
+        stack = [bm.faces[seed_index]]
+        component: set[int] = set()
+        while stack:
+            face = stack.pop()
+            if not face.is_valid or face.index in component:
+                continue
+            component.add(face.index)
+            for edge in face.edges:
+                if not edge.is_valid or edge.index in blocked_edge_indices:
+                    continue
+                for neighbor in edge.link_faces:
+                    if neighbor.is_valid and neighbor.index not in component:
+                        stack.append(neighbor)
+        key = tuple(sorted(component))
+        if key and key not in seen_components:
+            seen_components.add(key)
+            components.append(key)
+    components.sort(key=lambda item: (len(item), item))
+    return components
+
+
+def topology_counts_after_split_nudge(
+    bm: bmesh.types.BMesh,
+    bad_edge_indices: tuple[int, ...],
+    face_indices: tuple[int, ...],
+    direction: Vector,
+) -> dict[str, dict[str, int]] | None:
+    trial = bm.copy()
+    try:
+        if not split_nudge_bad_edge_component(trial, bad_edge_indices, face_indices, direction):
+            return None
+        return {
+            "mesh": bmesh_topology_counts(trial),
+            "geometric": bmesh_geometric_topology_counts(trial),
+        }
+    finally:
+        trial.free()
+
+
+def split_nudge_bad_edge_component(
+    bm: bmesh.types.BMesh,
+    bad_edge_indices: tuple[int, ...],
+    face_indices: tuple[int, ...],
+    direction: Vector,
+) -> bool:
+    bm.verts.ensure_lookup_table()
+    bm.edges.ensure_lookup_table()
+    bm.faces.ensure_lookup_table()
+    if any(edge_index >= len(bm.edges) or not bm.edges[edge_index].is_valid for edge_index in bad_edge_indices):
+        return False
+    if any(face_index >= len(bm.faces) or not bm.faces[face_index].is_valid for face_index in face_indices):
+        return False
+
+    edges_to_split = [bm.edges[edge_index] for edge_index in bad_edge_indices]
+    bmesh.ops.split_edges(bm, edges=edges_to_split)
+    bm.verts.ensure_lookup_table()
+    bm.edges.ensure_lookup_table()
+    bm.faces.ensure_lookup_table()
+
+    faces_to_nudge = [bm.faces[face_index] for face_index in face_indices if face_index < len(bm.faces)]
+    if not faces_to_nudge or any(not face.is_valid for face in faces_to_nudge):
+        return False
+    verts_to_nudge = unique_faces_vertices(faces_to_nudge)
+    if not verts_to_nudge:
+        return False
+    offset = direction.normalized() * GEOMETRIC_CLEANUP_COMPONENT_NUDGE_MM
+    for vert in verts_to_nudge:
+        vert.co += offset
+
+    bmesh.ops.remove_doubles(bm, verts=list(bm.verts), dist=MESH_CLOSURE_WELD_EPSILON_MM)
+    bmesh.ops.dissolve_degenerate(bm, edges=list(bm.edges), dist=MESH_CLOSURE_WELD_EPSILON_MM)
+    remove_loose_edges(bm)
+    bmesh.ops.recalc_face_normals(bm, faces=list(bm.faces))
+    bm.verts.ensure_lookup_table()
+    bm.edges.ensure_lookup_table()
+    bm.faces.ensure_lookup_table()
+    bm.verts.index_update()
+    bm.edges.index_update()
+    bm.faces.index_update()
+    return True
+
+
+def topology_counts_are_acceptable(
+    after: dict[str, int],
+    before: dict[str, int],
+    *,
+    require_improvement: bool,
+) -> bool:
+    if after["boundary_edge_count"] > before["boundary_edge_count"]:
+        return False
+    if after["non_manifold_edge_count"] > before["non_manifold_edge_count"]:
+        return False
+    if require_improvement and (
+        after["boundary_edge_count"] == before["boundary_edge_count"]
+        and after["non_manifold_edge_count"] >= before["non_manifold_edge_count"]
+    ):
+        return False
+    return True
+
+
+def valid_bmesh_face_indices(bm: bmesh.types.BMesh, face_indices: list[int]) -> list[int]:
+    bm.faces.ensure_lookup_table()
+    return sorted(
+        {
+            face_index
+            for face_index in face_indices
+            if 0 <= face_index < len(bm.faces) and bm.faces[face_index].is_valid
+        }
+    )
+
+
+def bmesh_face_areas_by_index(bm: bmesh.types.BMesh, face_indices: list[int]) -> dict[int, float]:
+    bm.faces.ensure_lookup_table()
+    return {face_index: bmesh_face_area(bm.faces[face_index]) for face_index in face_indices}
+
+
+def bmesh_topology_counts_after_face_delete_and_cleanup(
+    bm: bmesh.types.BMesh,
+    face_indices: tuple[int, ...],
+) -> dict[str, int] | None:
+    trial = bm.copy()
+    try:
+        if not delete_bmesh_faces_by_index(trial, face_indices, recalc_normals=False):
+            return None
+        return bmesh_topology_counts(trial)
+    finally:
+        trial.free()
+
+
+def delete_bmesh_faces_by_index(
+    bm: bmesh.types.BMesh,
+    face_indices: tuple[int, ...],
+    *,
+    recalc_normals: bool = True,
+) -> bool:
+    bm.faces.ensure_lookup_table()
+    if any(face_index >= len(bm.faces) or not bm.faces[face_index].is_valid for face_index in face_indices):
+        return False
+    faces_to_remove = [bm.faces[face_index] for face_index in face_indices]
+    bmesh.ops.delete(bm, geom=faces_to_remove, context="FACES_ONLY")
+    bm.verts.ensure_lookup_table()
+    bm.edges.ensure_lookup_table()
+    bm.faces.ensure_lookup_table()
+    remove_loose_edges(bm)
+    if recalc_normals:
+        bmesh.ops.recalc_face_normals(bm, faces=list(bm.faces))
+    bm.verts.ensure_lookup_table()
+    bm.edges.ensure_lookup_table()
+    bm.faces.ensure_lookup_table()
+    bm.faces.index_update()
+    return True
+
+
+def bmesh_edge_faces_by_index(bm: bmesh.types.BMesh) -> dict[int, set[int]]:
+    bm.edges.ensure_lookup_table()
+    bm.faces.ensure_lookup_table()
+    bm.edges.index_update()
+    bm.faces.index_update()
+    return {
+        edge.index: {face.index for face in edge.link_faces if face.is_valid}
+        for edge in bm.edges
+        if edge.is_valid
+    }
+
+
+def bad_edge_face_clusters(edge_faces: dict) -> list[list[int]]:
+    bad_edges = {
+        edge_key: set(faces)
+        for edge_key, faces in edge_faces.items()
+        if len(faces) > 2
+    }
+    if not bad_edges:
+        return []
+
+    face_to_edges: dict[int, set] = {}
+    for edge_key, faces in bad_edges.items():
+        for face_index in faces:
+            face_to_edges.setdefault(face_index, set()).add(edge_key)
+
+    clusters: list[list[int]] = []
+    remaining = set(bad_edges)
+    while remaining:
+        first = remaining.pop()
+        cluster_faces = set(bad_edges[first])
+        stack = [first]
+        while stack:
+            edge_key = stack.pop()
+            for face_index in bad_edges[edge_key]:
+                for neighbor in face_to_edges.get(face_index, set()):
+                    if neighbor not in remaining:
+                        continue
+                    remaining.remove(neighbor)
+                    cluster_faces.update(bad_edges[neighbor])
+                    stack.append(neighbor)
+        clusters.append(sorted(cluster_faces))
+    clusters.sort(key=lambda cluster: (len(cluster), cluster))
+    return clusters
+
+
+def bmesh_geometric_topology_counts(bm: bmesh.types.BMesh) -> dict[str, int]:
+    return geometric_topology_counts_from_face_edges(bmesh_geometric_face_edges(bm))[0]
+
+
+def bmesh_geometric_face_edges(
+    bm: bmesh.types.BMesh,
+) -> dict[int, tuple[tuple[tuple[int, int, int], tuple[int, int, int]], ...]]:
+    bm.faces.ensure_lookup_table()
+    bm.faces.index_update()
+    return {
+        face.index: tuple(
+            geometric_edge_key(face.verts[index].co, face.verts[(index + 1) % len(face.verts)].co)
+            for index in range(len(face.verts))
+        )
+        for face in bm.faces
+        if face.is_valid and len(face.verts) >= 3
+    }
 
 
 def remove_loose_edges(bm: bmesh.types.BMesh) -> int:
@@ -2317,6 +3004,9 @@ def apply_thin_features(profile: dict) -> dict:
         "vertices_checked": 0,
         "vertices_moved": 0,
         "thin_components": 0,
+        "small_planar_components_solidified": 0,
+        "small_planar_component_faces_replaced": 0,
+        "small_planar_component_faces_after": 0,
         "max_inflate_applied_mm": 0.0,
         "bounds_before": scene_bounds(),
         "bounds_after": None,
@@ -2343,11 +3033,18 @@ def apply_thin_features(profile: dict) -> dict:
         result["vertices_checked"] += object_result["vertices_checked"]
         result["vertices_moved"] += object_result["vertices_moved"]
         result["thin_components"] += object_result["thin_components"]
+        result["small_planar_components_solidified"] += object_result["small_planar_components_solidified"]
+        result["small_planar_component_faces_replaced"] += object_result["small_planar_component_faces_replaced"]
+        result["small_planar_component_faces_after"] += object_result["small_planar_component_faces_after"]
         result["max_inflate_applied_mm"] = max(
             result["max_inflate_applied_mm"],
             object_result["max_inflate_applied_mm"],
         )
-        if object_result["vertices_moved"] or object_result["thin_components"]:
+        if (
+            object_result["vertices_moved"]
+            or object_result["thin_components"]
+            or object_result["small_planar_components_solidified"]
+        ):
             result["objects"].append(object_result)
     result["bounds_after"] = scene_bounds()
     return result
@@ -2367,6 +3064,9 @@ def thicken_mesh_object_thin_features(
         "vertices_moved": 0,
         "ray_hits": 0,
         "thin_components": 0,
+        "small_planar_components_solidified": 0,
+        "small_planar_component_faces_replaced": 0,
+        "small_planar_component_faces_after": 0,
         "max_inflate_applied_mm": 0.0,
     }
     if not mesh.vertices or not mesh.polygons:
@@ -2423,6 +3123,18 @@ def thicken_mesh_object_thin_features(
 
     if result["vertices_moved"]:
         mesh.update()
+
+    planar_result = solidify_small_planar_thin_components(
+        mesh,
+        min_thickness_mm=min_thickness_mm,
+        max_inflate_mm=max_inflate_mm,
+    )
+    result["small_planar_components_solidified"] = planar_result["components_solidified"]
+    result["small_planar_component_faces_replaced"] = planar_result["faces_replaced"]
+    result["small_planar_component_faces_after"] = planar_result["faces_after"]
+    if planar_result["components_solidified"]:
+        mesh.update()
+        recalculate_mesh_normals(mesh)
     return result
 
 
@@ -2484,6 +3196,210 @@ def inflate_loose_thin_components(
             inflate_by_vertex[vertex_index] = max(inflate_by_vertex[vertex_index], inflate)
         thin_components += 1
     return thin_components
+
+
+def solidify_small_planar_thin_components(
+    mesh: bpy.types.Mesh,
+    *,
+    min_thickness_mm: float,
+    max_inflate_mm: float,
+) -> dict:
+    result = {
+        "components_solidified": 0,
+        "faces_replaced": 0,
+        "faces_after": 0,
+    }
+    if min_thickness_mm <= 0 or max_inflate_mm <= 0:
+        return result
+
+    bm = bmesh.new()
+    try:
+        bm.from_mesh(mesh)
+        bm.verts.ensure_lookup_table()
+        bm.edges.ensure_lookup_table()
+        bm.faces.ensure_lookup_table()
+        candidates: list[tuple[list[bmesh.types.BMFace], list[bmesh.types.BMVert], dict]] = []
+        for faces in all_face_components(bm):
+            candidate = small_planar_component_prism_candidate(
+                faces,
+                min_thickness_mm=min_thickness_mm,
+                max_inflate_mm=max_inflate_mm,
+            )
+            if candidate is None:
+                continue
+            candidates.append(candidate)
+
+        if not candidates:
+            return result
+
+        for faces, verts, prism in candidates:
+            valid_faces = [face for face in faces if face.is_valid]
+            if not valid_faces:
+                continue
+            material_index = valid_faces[0].material_index
+            result["faces_replaced"] += len(valid_faces)
+            bmesh.ops.delete(bm, geom=valid_faces, context="FACES_ONLY")
+            bm.verts.ensure_lookup_table()
+            bm.edges.ensure_lookup_table()
+            bm.faces.ensure_lookup_table()
+
+            loose_verts = [vert for vert in verts if vert.is_valid and len(vert.link_faces) == 0]
+            if loose_verts:
+                bmesh.ops.delete(bm, geom=loose_verts, context="VERTS")
+                bm.verts.ensure_lookup_table()
+                bm.edges.ensure_lookup_table()
+                bm.faces.ensure_lookup_table()
+
+            new_faces = add_prism_to_bmesh(bm, prism, material_index=material_index)
+            result["faces_after"] += len(new_faces)
+            result["components_solidified"] += 1
+
+        remove_loose_edges(bm)
+        bmesh.ops.recalc_face_normals(bm, faces=list(bm.faces))
+        bm.verts.ensure_lookup_table()
+        bm.edges.ensure_lookup_table()
+        bm.faces.ensure_lookup_table()
+        bm.to_mesh(mesh)
+    finally:
+        bm.free()
+    return result
+
+
+def small_planar_component_prism_candidate(
+    faces: list[bmesh.types.BMFace],
+    *,
+    min_thickness_mm: float,
+    max_inflate_mm: float,
+) -> tuple[list[bmesh.types.BMFace], list[bmesh.types.BMVert], dict] | None:
+    faces = [face for face in faces if face.is_valid]
+    if not faces or len(faces) > 8:
+        return None
+    verts = unique_faces_vertices(faces)
+    if len(verts) < 4 or len(verts) > 8:
+        return None
+    points = [vert.co.copy() for vert in verts]
+    frame = planar_component_frame(points)
+    if frame is None:
+        return None
+    center, length_axis, width_axis, normal, length_span, width_span, max_deviation = frame
+    if max_deviation > MESH_CLOSURE_PLANAR_SHEET_MAX_DEVIATION_MM:
+        return None
+    if length_span <= 0 or length_span > min_thickness_mm * 12:
+        return None
+    if width_span >= min_thickness_mm and max_deviation >= min_thickness_mm * 0.5:
+        return None
+    if width_span <= 0 and max_deviation <= 0:
+        return None
+
+    final_width = expanded_feature_span(width_span, min_thickness_mm, max_inflate_mm)
+    final_thickness = expanded_feature_span(max_deviation, min_thickness_mm, max_inflate_mm)
+    if final_width <= width_span and final_thickness <= max_deviation:
+        return None
+    if final_width <= 0 or final_thickness <= 0:
+        return None
+    return (
+        faces,
+        verts,
+        {
+            "center": center,
+            "length_axis": length_axis,
+            "width_axis": width_axis,
+            "normal": normal,
+            "length": length_span,
+            "width": final_width,
+            "thickness": final_thickness,
+        },
+    )
+
+
+def planar_component_frame(
+    points: list[Vector],
+) -> tuple[Vector, Vector, Vector, Vector, float, float, float] | None:
+    if len(points) < 4:
+        return None
+    length_axis = farthest_points_axis(points)
+    if length_axis is None or length_axis.length <= 0:
+        return None
+    length_axis.normalize()
+
+    origin = points[0]
+    best_normal = Vector((0.0, 0.0, 0.0))
+    best_length = 0.0
+    for point in points:
+        candidate = length_axis.cross(point - origin)
+        if candidate.length > best_length:
+            best_normal = candidate
+            best_length = candidate.length
+    if best_length <= 1e-9:
+        return None
+    normal = best_normal.normalized()
+    width_axis = normal.cross(length_axis)
+    if width_axis.length <= 1e-9:
+        return None
+    width_axis.normalize()
+
+    center = Vector((0.0, 0.0, 0.0))
+    for point in points:
+        center += point
+    center /= len(points)
+    length_values = [float((point - center).dot(length_axis)) for point in points]
+    width_values = [float((point - center).dot(width_axis)) for point in points]
+    normal_values = [float((point - center).dot(normal)) for point in points]
+    length_span = max(length_values) - min(length_values)
+    width_span = max(width_values) - min(width_values)
+    normal_span = max(normal_values) - min(normal_values)
+    return center, length_axis, width_axis, normal, length_span, width_span, normal_span
+
+
+def expanded_feature_span(current_span: float, target_span: float, max_inflate_mm: float) -> float:
+    if current_span >= target_span:
+        return current_span
+    return current_span + min(max_inflate_mm * 2, target_span - current_span)
+
+
+def add_prism_to_bmesh(
+    bm: bmesh.types.BMesh,
+    prism: dict,
+    *,
+    material_index: int,
+) -> list[bmesh.types.BMFace]:
+    center = prism["center"]
+    length_axis = prism["length_axis"]
+    width_axis = prism["width_axis"]
+    normal = prism["normal"]
+    half_length = prism["length"] / 2
+    half_width = prism["width"] / 2
+    half_thickness = prism["thickness"] / 2
+
+    coordinates = []
+    for normal_sign in (-1, 1):
+        for width_sign in (-1, 1):
+            for length_sign in (-1, 1):
+                coordinates.append(
+                    center
+                    + length_axis * (half_length * length_sign)
+                    + width_axis * (half_width * width_sign)
+                    + normal * (half_thickness * normal_sign)
+                )
+    verts = [bm.verts.new(coordinate) for coordinate in coordinates]
+    bm.verts.ensure_lookup_table()
+
+    face_indices = (
+        (0, 1, 3, 2),
+        (4, 6, 7, 5),
+        (0, 4, 5, 1),
+        (2, 3, 7, 6),
+        (0, 2, 6, 4),
+        (1, 5, 7, 3),
+    )
+    faces: list[bmesh.types.BMFace] = []
+    for indices in face_indices:
+        face = new_bmesh_poly_face(bm, [verts[index] for index in indices])
+        if face is None:
+            continue
+        face.material_index = material_index
+        faces.append(face)
+    return faces
 
 
 def mesh_loose_components(mesh: bpy.types.Mesh) -> list[list[int]]:
@@ -2659,6 +3575,7 @@ def clean_joined_geometric_overlaps(obj: bpy.types.Object) -> dict:
         "component_hull_faces_after": 0,
         "components_nudged": 0,
         "vertices_nudged": 0,
+        **local_face_repair_manifest_fields("local_geometric_repair"),
         "area_removed_mm2": 0.0,
         "triangulated": False,
         "mesh_topology_before": mesh_topology_counts(obj.data),
@@ -2733,6 +3650,16 @@ def clean_joined_geometric_overlaps(obj: bpy.types.Object) -> dict:
             if not candidate_faces:
                 result["warnings"].append("geometric cleanup stopped because no overused position edges were found")
                 break
+
+            local_repair = repair_geometric_bad_edge_clusters_with_face_removal(bm)
+            merge_local_face_repair_manifest_fields(result, "local_geometric_repair", local_repair)
+            if local_repair["faces_removed"]:
+                result["faces_removed"] += local_repair["faces_removed"]
+                result["area_removed_mm2"] = round(
+                    result["area_removed_mm2"] + local_repair["area_removed_mm2"],
+                    6,
+                )
+                continue
 
             removal: tuple[int, ...] = ()
             if len(candidate_faces) <= GEOMETRIC_CLEANUP_MAX_CANDIDATE_FACES:
@@ -3359,11 +4286,22 @@ def geometric_topology_counts_from_faces(
     face_vertices: dict[int, tuple[Vector, Vector, Vector]],
     removed_faces: frozenset[int] = frozenset(),
 ) -> tuple[dict[str, int], dict[tuple[tuple[int, int, int], tuple[int, int, int]], set[int]]]:
+    face_edges = {
+        face_index: geometric_triangle_edges(vertices)
+        for face_index, vertices in face_vertices.items()
+    }
+    return geometric_topology_counts_from_face_edges(face_edges, removed_faces=removed_faces)
+
+
+def geometric_topology_counts_from_face_edges(
+    face_edges: dict[int, tuple[tuple[tuple[int, int, int], tuple[int, int, int]], ...]],
+    removed_faces: frozenset[int] = frozenset(),
+) -> tuple[dict[str, int], dict[tuple[tuple[int, int, int], tuple[int, int, int]], set[int]]]:
     edge_faces: dict[tuple[tuple[int, int, int], tuple[int, int, int]], set[int]] = {}
-    for face_index, vertices in face_vertices.items():
+    for face_index, edges in face_edges.items():
         if face_index in removed_faces:
             continue
-        for edge in geometric_triangle_edges(vertices):
+        for edge in edges:
             edge_faces.setdefault(edge, set()).add(face_index)
     edge_face_counts = [len(faces) for faces in edge_faces.values()]
     return (
@@ -3379,15 +4317,19 @@ def geometric_triangle_edges(
     vertices: tuple[Vector, Vector, Vector],
 ) -> tuple[tuple[tuple[int, int, int], tuple[int, int, int]], ...]:
     return tuple(
-        tuple(
-            sorted(
-                (
-                    quantized_vector(first, GEOMETRIC_CLEANUP_QUANTIZATION_MM),
-                    quantized_vector(second, GEOMETRIC_CLEANUP_QUANTIZATION_MM),
-                )
+        geometric_edge_key(first, second)
+        for first, second in ((vertices[0], vertices[1]), (vertices[1], vertices[2]), (vertices[2], vertices[0]))
+    )
+
+
+def geometric_edge_key(first: Vector, second: Vector) -> tuple[tuple[int, int, int], tuple[int, int, int]]:
+    return tuple(
+        sorted(
+            (
+                quantized_vector(first, GEOMETRIC_CLEANUP_QUANTIZATION_MM),
+                quantized_vector(second, GEOMETRIC_CLEANUP_QUANTIZATION_MM),
             )
         )
-        for first, second in ((vertices[0], vertices[1]), (vertices[1], vertices[2]), (vertices[2], vertices[0]))
     )
 
 

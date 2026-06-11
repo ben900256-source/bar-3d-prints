@@ -14,3 +14,4 @@ vendor/
 barprint_inspect_pieces.json
 barprint.local.json
 .barprint-cache/
+AGENTS.md

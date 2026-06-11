@@ -8,9 +8,9 @@ The tool runs on your computer. It does not upload BAR assets or generated model
 
 These sample renders are untextured captures of final STL output from `barprint`.
 
-| CORAK bot | CORPYRO heavy bot | CORMSHIP naval unit |
+| CORAK bot | CORPYRO heavy bot | CORROY destroyer |
 | --- | --- | --- |
-| ![CORAK sample STL render](docs/images/corak-sample.png) | ![CORPYRO sample STL render](docs/images/corpyro-sample.png) | ![CORMSHIP sample STL render](docs/images/cormship-sample.png) |
+| ![CORAK sample STL render](docs/images/corak-sample.png) | ![CORPYRO sample STL render](docs/images/corpyro-sample.png) | ![CORROY sample STL side-profile render](docs/images/corroy-sample.png) |
 
 ## Quickstart
 
@@ -21,21 +21,25 @@ git clone https://github.com/ben900256-source/bar-3d-prints.git
 cd bar-3d-prints
 python -m pip install .
 barprint configure --user
-barprint list-units --faction cortex
+barprint list-units --faction cortex --type bot
 barprint export --unit corak --out .\out\corak
 ```
 
 `configure --user` looks for Blender and BAR data, then saves the paths for later commands. If the BAR data path is not found automatically, it asks you to paste the path.
 
-`list-units --faction cortex` prints a table like this:
+`list-units --faction cortex --type bot` prints a long table that begins like this:
 
 ```text
-                                             Cortex (1)
-+-------+-------+-----------------+------+------+--------------------------+
-| Code  | Name  | Description     | Kind | Type | Source                   |
-|-------+-------+-----------------+------+------+--------------------------|
-| corak | corak | Units/CORAK.s3o | unit |      | objects3d/Units/CORAK.s3o |
-+-------+-------+-----------------+------+------+--------------------------+
+                                                                                    Cortex (55)
++----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| Code           | Name                         | Description                                | Kind     | Type                         | Source                                    |
+|----------------+------------------------------+--------------------------------------------+----------+------------------------------+-------------------------------------------|
+| coraak         | Manticore                    | Heavy Amphibious Anti-Air Bot              | unit     | Bot                          | objects3d/units/coraak.s3o                |
+| corack         | Advanced Construction Bot    | Tech 2 Constructor                         | unit     | Bot                          | objects3d/units/corack.s3o                |
+| corak          | Grunt                        | Fast Infantry Bot                          | unit     | Bot                          | objects3d/units/corak.s3o                 |
+| corakt4        | Epic Grunt                   | Fast Amphibious Infantry Bot               | unit     | Bot                          | objects3d/units/scavboss/corakt4.s3o      |
+| coralab        | Advanced Bot Lab             | Produces Tech 2 Bots                       | building | Bot                          | objects3d/units/coralab.s3o               |
+...
 ```
 
 Use the `Code` column with `barprint export`. In the example above, the code is `corak`.
