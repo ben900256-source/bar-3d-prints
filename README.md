@@ -22,7 +22,7 @@ cd bar-3d-prints
 python -m pip install .
 barprint configure --user
 barprint list-units --faction cortex --type bot
-barprint export --unit corak --out .\out\corak
+barprint export --unit corak --out .\out\corak --open
 ```
 
 `configure --user` looks for Blender and BAR data, then saves the paths for later commands. If the BAR data path is not found automatically, it asks you to paste the path.
@@ -44,13 +44,35 @@ barprint export --unit corak --out .\out\corak
 
 Use the `Code` column with `barprint export`. In the example above, the code is `corak`.
 
+Useful listing commands:
+
+```powershell
+barprint list-units
+barprint list-units --by-faction
+barprint list-units --group-by kind
+barprint list-units --group-by type
+barprint list-units --group-by factory --kind unit
+barprint list-units --faction cortex --type naval
+barprint info --unit corak
+```
+
 After the export, expect the final STL:
 
 ```text
 out/corak/corak.stl
 ```
 
-Open `corak.stl` in your slicer. If you want the manifest JSON and normalized print-source GLB for debugging or audit trails, add `--export-support-files`.
+Use `--open` to launch the exported file in your default slicer or STL app when the export finishes:
+
+```powershell
+barprint export --unit corak --out .\out\corak --open
+barprint export --unit corpyro --out .\out\corpyro --open
+barprint export --unit corroy --out .\out\corroy --open
+barprint export --unit corroy --format 3mf --out .\out\corroy --open
+barprint export --unit corak --out .\out\corak --export-support-files --open
+```
+
+If you want the manifest JSON and normalized print-source GLB for debugging or audit trails, add `--export-support-files`.
 
 ## More Docs
 
