@@ -12,6 +12,10 @@ These sample renders are untextured captures of final STL output from `barprint`
 | --- | --- | --- |
 | ![CORAK sample STL render](docs/images/corak-sample.png) | ![CORPYRO sample STL render](docs/images/corpyro-sample.png) | ![CORROY sample STL side-profile render](docs/images/corroy-sample.png) |
 
+Slicer preview of the default CORAK STL:
+
+![CORAK STL in slicer](docs/images/corak-slicer-preview.png)
+
 ## Quickstart
 
 Requirements: Windows PowerShell, Python 3.10 or newer, Blender, and an installed Beyond All Reason data directory.
@@ -22,7 +26,7 @@ cd bar-3d-prints
 python -m pip install .
 barprint configure --user
 barprint list-units --faction cortex --type bot
-barprint export --unit corak --out .\out\corak --open
+barprint export --unit corak --open
 ```
 
 `configure --user` looks for Blender and BAR data, then saves the paths for later commands. If the BAR data path is not found automatically, it asks you to paste the path.
@@ -62,14 +66,17 @@ After the export, expect the final STL:
 out/corak/corak.stl
 ```
 
+When `--out` is omitted, exports are written to `out\<unit>\<unit>.<format>`.
+
 Use `--open` to launch the exported file in your default slicer or STL app when the export finishes:
 
 ```powershell
-barprint export --unit corak --out .\out\corak --open
-barprint export --unit corpyro --out .\out\corpyro --open
-barprint export --unit corroy --out .\out\corroy --open
-barprint export --unit corroy --format 3mf --out .\out\corroy --open
-barprint export --unit corak --out .\out\corak --export-support-files --open
+barprint export --unit corak --open
+barprint export --unit corpyro --open
+barprint export --unit corroy --open
+barprint export --unit corroy --format 3mf --open
+barprint export --unit corak --export-support-files --open
+barprint export --unit corak --out .\custom-output\corak.stl --open
 ```
 
 If you want the manifest JSON and normalized print-source GLB for debugging or audit trails, add `--export-support-files`.
