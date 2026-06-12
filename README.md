@@ -8,13 +8,9 @@ The tool runs on your computer. It does not upload BAR assets or generated model
 
 These sample renders are untextured captures of final STL output from `barprint`.
 
-| CORAK bot | CORPYRO heavy bot | CORROY destroyer |
-| --- | --- | --- |
-| ![CORAK sample STL render](docs/images/corak-sample.png) | ![CORPYRO sample STL render](docs/images/corpyro-sample.png) | ![CORROY sample STL side-profile render](docs/images/corroy-sample.png) |
-
-Slicer preview of the default CORAK STL:
-
-![CORAK STL in slicer](docs/images/corak-slicer-preview.png)
+| CORAK bot | CORPYRO heavy bot | CORROY destroyer | CORAK in slicer |
+| --- | --- | --- | --- |
+| <img src="docs/images/corak-sample.png" alt="CORAK sample STL render" width="220"> | <img src="docs/images/corpyro-sample.png" alt="CORPYRO sample STL render" width="220"> | <img src="docs/images/corroy-sample.png" alt="CORROY sample STL side-profile render" width="220"> | <img src="docs/images/corak-slicer-preview.png" alt="CORAK STL in slicer" width="220"> |
 
 ## Quickstart
 
